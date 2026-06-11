@@ -1,4 +1,4 @@
-name: Build Android APK (Bubblewrap)
+name: Deploy Painel Protegido
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,28 +16,19 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 24
+        node-version: 20
 
-    - name: Setup Java JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Install Bubblewrap CLI
-      run: npm install -g @bubblewrap/cli
-
-    - name: Initialize and Build APK
+    - name: Criptografar com Senha
       run: |
-        # Cria uma configuração padrão para gerar o APK automaticamente
-        bubblewrap init --manifest=manifest.json --meta=twa-manifest.json --skipConfig
-        bubblewrap build --skipSigning
-        
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
+        npm install -g pagecrypt
+        # Substitua a palavra MINHASENHA123 abaixo pela senha secreta que você quiser usar
+        pagecrypt index.html index.html "S@ntidad3"
+
+    - name: Upload para o GitHub Pages
+      uses: actions/upload-pages-artifact@v3
       with:
-        name: app-release-apk
-        path: ./*.apk
+        path: '.'
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
