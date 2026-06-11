@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Monitoramento</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 15px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        /* Painel Superior */
+        .header { background-color: #1e293b; color: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .header p { margin: 5px 0 0 0; color: #94a3b8; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .contador { background-color: #ef4444; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 15px; white-space: nowrap; }
+        
+        /* 🟢 Estilo do LED Indicador Visual */
+        .led-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #10b981; /* Verde padrão inicial */
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Campo de Configuração do Alvo */
+        .config-box { background: rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 6px; display: flex; gap: 10px; align-items: center; }
+        .config-box label { font-size: 13px; font-weight: bold; color: #cbd5e1; }
+        .config-box input { flex: 1; padding: 8px; border: none; border-radius: 4px; font-size: 14px; }
+        .config-box button { background-color: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .config-box button:hover { background-color: #059669; }
+
+        /* Lista e Cards */
+        .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid #ef4444; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .card-info h3 { margin: 0 0 5px 0; color: #1e293b; font-size: 16px; }
+        .card-info p { margin: 0; color: #64748b; font-size: 13px; }
+        .card-info .tag { display: inline-block; background-color: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: #475569; margin-top: 8px; }
+        .btn-link { background-color: #ef4444; color: white; text-decoration: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; font-size: 13px; white-space: nowrap; }
+        
+        .sem-dados { text-align: center; padding: 40px 20px; background: white; border-radius: 8px; color: #64748b; }
+        .sem-dados h2 { font-size: 18px; margin-bottom: 5px; }
+
+        /* Ajustes para Celular */
+        @media (max-width: 600px) {
+            .header-top { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .contador { align-self: flex-end; }
+            .config-box { flex-direction: column; align-items: stretch; }
+            .card { flex-direction: column; align-items: flex-start; }
+            .btn-link { width: 100%; text-align: center; box-sizing: border-box; margin-top: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="header-top">
+            <div>
+                <h1>📺 Monitor de Cópias Piratas</h1>
+                <p>
+                    <span id="led" class="led-status"></span> 
+                    Status: <span id="txt-status" style="color: #10b981; font-weight: bold;">Iniciando...</span>
+                </p>
+                <p>Última checagem: <span id="txt-atualizacao">Nunca</span></p>
+            </div>
+            <div class="contador"><span id="txt-contador">0</span> Detectadas</div>
+        </div>
+        
+        <div class="config-box">
+            <label for="input-alvo">Termo Alvo:</label>
+            <input type="text" id="input-alvo" value="TV Canção Nova">
+            <button onclick="salvarEBuscar()">Buscar Novo Alvo</button>
+        </div>
+    </div>
+
+    <div class="grid" id="container-cards"></div>
+</div>
+
+<script>
+    // --- CONFIGURAÇÕES ---
+    const API_KEY = "AIzaSyCodGa8Wjq-HF_zgYgbOMl3zLTGbk_PpSs";
+    const TERMOS_PARA_IGNORAR = ["canção nova", "aparecida", "redevida", "pai eterno", "santuário de fátima", "jesus é o senhor", "paz perfeita", "oficial"];
+    
+    const TEMPO_CHECAGEM = 900000; // 15 minutos
+    
+    let historicoVisto = new Set();
+    let ID_INTERVALO = null;
+
+    if (typeof Notification !== 'undefined' && Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+    }
+
+    async function checarYouTube() {
+        const alvo = document.getElementById('input-alvo').value.trim();
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&eventType=live&q=${encodeURIComponent(alvo)}&order=date&maxResults=25&key=${API_KEY}`;
+        
+        const container = document.getElementById('container-cards');
+        const txtAtualizacao = document.getElementById('txt-atualizacao');
+        const txtContador = document.getElementById('txt-contador');
+        const txtStatus = document.getElementById('txt-status');
+        const led = document.getElementById('led');
+        
+        const horaAtual = new Date().toLocaleTimeString();
+        txtAtualizacao.innerText = horaAtual;
+        
+        // 🟡 Muda para Amarelo enquanto procura
+        txtStatus.innerText = "Buscando...";
+        txtStatus.style.color = "#f59e0b";
+        led.style.backgroundColor = "#f59e0b";
+        led.style.boxShadow = "0 0 8px rgba(245, 158, 11, 0.6)";
+
+        try {
+            const resposta = await fetch(url);
+            
+            if (resposta.status === 403) {
+                throw new Error("Cota Diária Excedida ou Sem Acesso");
+            } else if (!resposta.ok) {
+                throw new Error(`Erro HTTP: ${resposta.status}`);
+            }
+
+            const dados = await resposta.json();
+            
+            if (!dados.items || dados.items.length === 0) {
+                mostrarTelaVazia();
+                return;
+            }
+
+            let novasCopiasHtml = "";
+            let totalDetectado = 0;
+
+            dados.items.forEach(item => {
+                const nomeCanal = item.snippet.channelTitle;
+                const idV = item.id ? item.id.videoId : null;
+                const tituloLive = item.snippet.title;
+
+                if (!idV || idV === "None") return;
+                if (TERMOS_PARA_IGNORAR.some(termo => nomeCanal.toLowerCase().includes(termo))) return;
+
+                totalDetectado++;
+                const link = `https://www.youtube.com/watch?v=${idV}`;
+
+                if (!historicoVisto.has(idV)) {
+                    dispararNotificacao(nomeCanal, tituloLive);
+                    historicoVisto.add(idV);
+                }
+
+                novasCopiasHtml += `
+                    <div class="card">
+                        <div class="card-info">
+                            <h3>${nomeCanal}</h3>
+                            <p><strong>Live:</strong> ${tituloLive}</p>
+                            <span class="tag">🕒 Detectado às ${horaAtual}</span>
+                        </div>
+                        <div>
+                            <a href="${link}" target="_blank" class="btn-link">Ver Live ↗</a>
+                        </div>
+                    </div>
+                `;
+            });
+
+            txtContador.innerText = totalDetectado;
+
+            if (totalDetectado > 0) {
+                container.innerHTML = novasCopiasHtml;
+            } else {
+                mostrarTelaVazia();
+                return; // Evita sobrescrever o status abaixo
+            }
+            
+            // 🟢 Muda para Verde se tudo ocorreu bem e encontrou dados
+            txtStatus.innerText = "Monitorando ativo";
+            txtStatus.style.color = "#10b981";
+            led.style.backgroundColor = "#10b981";
+            led.style.boxShadow = "0 0 8px rgba(16, 185, 129, 0.6)";
+
+        } catch (erro) {
+            console.error("Erro:", erro);
+            
+            // 🔴 Muda para Vermelho se der erro
+            led.style.backgroundColor = "#ef4444";
+            led.style.boxShadow = "0 0 8px rgba(239, 68, 68, 0.6)";
+            
+            if (erro.message.includes("Cota Diária Excedida")) {
+                txtStatus.innerText = "Limite da API atingido por hoje!";
+            } else {
+                txtStatus.innerText = "Erro na última busca";
+            }
+            txtStatus.style.color = "#ef4444";
+        }
+    }
+
+    function mostrarTelaVazia() {
+        const led = document.getElementById('led');
+        document.getElementById('container-cards').innerHTML = `
+            <div class="sem-dados">
+                <h2>✅ Nenhuma cópia não autorizada.</h2>
+                <p>O sistema continua varrendo o YouTube automaticamente.</p>
+            </div>
+        `;
+        document.getElementById('txt-contador').innerText = "0";
+        document.getElementById('txt-status').innerText = "Monitorando ativo";
+        document.getElementById('txt-status').style.color = "#10b981";
+        
+        // 🟢 Mantém o indicador em Verde na tela limpa
+        led.style.backgroundColor = "#10b981";
+        led.style.boxShadow = "0 0 8px rgba(16, 185, 129, 0.6)";
+    }
+
+    function dispararNotificacao(canal, titulo) {
+        if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+            new Notification("🚨 Cópia Detectada!", {
+                body: `Canal: ${canal}\nVídeo: ${titulo}`,
+                icon: "https://cdn-icons-png.flaticon.com/512/220/220214.png"
+            });
+        }
+    }
+
+    function iniciarCicloMonitoramento() {
+        if (ID_INTERVALO) {
+            clearInterval(ID_INTERVALO);
+        }
+        checarYouTube();
+        ID_INTERVALO = setInterval(checarYouTube, TEMPO_CHECAGEM);
+    }
+
+    function salvarEBuscar() {
+        historicoVisto.clear();
+        iniciarCicloMonitoramento();
+    }
+
+    iniciarCicloMonitoramento();
+</script>
+
+</body>
+</html>

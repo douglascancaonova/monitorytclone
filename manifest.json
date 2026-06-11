@@ -1,0 +1,15 @@
+{
+"name": "Monitor de Cópias Piratas",
+"short_name": "Monitor Live",
+"start_url": ".",
+"display": "standalone",
+"background_color": "#1e293b",
+"theme_color": "#1e293b",
+"icons": [
+{
+"src": "https://cdn-icons-png.flaticon.com/512/220/220214.png",
+"sizes": "512x512",
+"type": "image/png"
+}
+]
+}
