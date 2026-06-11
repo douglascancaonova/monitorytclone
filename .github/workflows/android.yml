@@ -16,16 +16,24 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 24
 
-    - name: Initialize Package and Install Capacitor
+    - name: Create Web Directory and Move Files
+      run: |
+        mkdir -p www
+        cp index.html www/ 2>/dev/null || true
+        cp manifest.json www/ 2>/dev/null || true
+        cp sw.js www/ 2>/dev/null || true
+        # Caso seus arquivos estejam na raiz, isso garante que o Capacitor os veja dentro de 'www'
+
+    - name: Initialize Project
       run: |
         npm init -y
         npm install @capacitor/core @capacitor/cli @capacitor/android
 
-    - name: Initialize Capacitor Config
+    - name: Initialize Capacitor
       run: |
-        npx cap init "Monitor YT" "com.douglas.monitoryt" --web-dir=.
+        npx cap init "Monitor YT" "com.douglas.monitoryt" --web-dir=www
 
     - name: Setup Java JDK
       uses: actions/setup-java@v4
