@@ -1,45 +1,4 @@
-name: Deploy Painel Protegido
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
-# ISSO AQUI RESOLVE O ERRO DA FOTO:
-permissions:
-  contents: read
-  id-token: write
-  pages: write
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout source
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 24
-
-    - name: Criptografar com Senha
-      run: |
-        npm install -g pagecrypt
-        # Troque MINHASENHA123 pela senha que você quiser usar no seu S24
-        pagecrypt index.html index.html "S@ntidad3"
-
-    - name: Upload para o GitHub Pages
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: '.'
-
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
-
-      name: Gerar APK Oficial
+name: Gerar APK Oficial
 
 on:
   push:
@@ -79,4 +38,5 @@ jobs:
       with:
         name: Monitor-YT-APK
         path: ./*.apk
+
 
