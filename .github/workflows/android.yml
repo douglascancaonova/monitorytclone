@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK (Bubblewrap)
 
 on:
   push:
@@ -18,23 +18,6 @@ jobs:
       with:
         node-version: 24
 
-    - name: Create Web Directory and Move Files
-      run: |
-        mkdir -p www
-        cp index.html www/ 2>/dev/null || true
-        cp manifest.json www/ 2>/dev/null || true
-        cp sw.js www/ 2>/dev/null || true
-        # Caso seus arquivos estejam na raiz, isso garante que o Capacitor os veja dentro de 'www'
-
-    - name: Initialize Project
-      run: |
-        npm init -y
-        npm install @capacitor/core @capacitor/cli @capacitor/android
-
-    - name: Initialize Capacitor
-      run: |
-        npx cap init "Monitor YT" "com.douglas.monitoryt" --web-dir=www
-
     - name: Setup Java JDK
       uses: actions/setup-java@v4
       with:
@@ -44,14 +27,17 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Build Android Project
-      run: |
-        npx cap add android
-        npx cap sync
-        cd android && ./gradlew assembleDebug
+    - name: Install Bubblewrap CLI
+      run: npm install -g @bubblewrap/cli
 
+    - name: Initialize and Build APK
+      run: |
+        # Cria uma configuração padrão para gerar o APK automaticamente
+        bubblewrap init --manifest=manifest.json --meta=twa-manifest.json --skipConfig
+        bubblewrap build --skipSigning
+        
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug-apk
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        name: app-release-apk
+        path: ./*.apk
