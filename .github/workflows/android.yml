@@ -38,3 +38,45 @@ jobs:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
+
+      name: Gerar APK Oficial
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Instalar Bubblewrap
+      run: npm install -g @bubblewrap/cli
+
+    - name: Construir APK
+      run: |
+        # O robô baixa o seu manifesto direto do site que já funciona e gera o app
+        bubblewrap init --manifest=https://douglascancaonova.github.io/monitorytclone/manifest.json --meta=twa-manifest.json --skipConfig
+        bubblewrap build --skipSigning
+
+    - name: Liberar Download do APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: Monitor-YT-APK
+        path: ./*.apk
+
