@@ -21,7 +21,7 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background-color: #10b981; /* Verde padrão inicial */
+            background-color: #10b981; 
             box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
@@ -83,7 +83,9 @@
 <script>
     // --- CONFIGURAÇÕES ---
     const API_KEY = "AIzaSyCodGa8Wjq-HF_zgYgbOMl3zLTGbk_PpSs";
-    const TERMOS_PARA_IGNORAR = ["canção nova", "SBT", "aparecida", "redevida", "pai eterno", "santuário de fátima", "jesus é o senhor", "paz perfeita", "oficial"];
+    
+    // CORREÇÃO: Todos os termos em minúsculo para bater com o .toLowerCase()
+    const TERMOS_PARA_IGNORAR = ["canção nova", "sbt", "aparecida", "redevida", "pai eterno", "santuário de fátima", "jesus é o senhor", "paz perfeita", "oficial"];
     
     const TEMPO_CHECAGEM = 900000; // 15 minutos
     
@@ -133,26 +135,32 @@
             let totalDetectado = 0;
 
             dados.items.forEach(item => {
-                const nomeCanal = item.snippet.channelTitle;
+                const nomeCanal = item.snippet.channelTitle.toLowerCase();
+                const tituloLive = item.snippet.title.toLowerCase();
                 const idV = item.id ? item.id.videoId : null;
-                const tituloLive = item.snippet.title;
 
                 if (!idV || idV === "None") return;
-                if (TERMOS_PARA_IGNORAR.some(termo => nomeCanal.toLowerCase().includes(termo))) return;
+                
+                // CORREÇÃO: Ignora se o termo proibido estiver no nome do canal OU no título da live
+                const deveIgnorar = TERMOS_PARA_IGNORAR.some(termo => 
+                    nomeCanal.includes(termo) || tituloLive.includes(termo)
+                );
+                
+                if (deveIgnorar) return;
 
                 totalDetectado++;
                 const link = `https://www.youtube.com/watch?v=${idV}`;
 
                 if (!historicoVisto.has(idV)) {
-                    dispararNotificacao(nomeCanal, tituloLive);
+                    dispararNotificacao(item.snippet.channelTitle, item.snippet.title);
                     historicoVisto.add(idV);
                 }
 
                 novasCopiasHtml += `
                     <div class="card">
                         <div class="card-info">
-                            <h3>${nomeCanal}</h3>
-                            <p><strong>Live:</strong> ${tituloLive}</p>
+                            <h3>${item.snippet.channelTitle}</h3>
+                            <p><strong>Live:</strong> ${item.snippet.title}</p>
                             <span class="tag">🕒 Detectado às ${horaAtual}</span>
                         </div>
                         <div>
@@ -168,10 +176,10 @@
                 container.innerHTML = novasCopiasHtml;
             } else {
                 mostrarTelaVazia();
-                return; // Evita sobrescrever o status abaixo
+                return;
             }
             
-            // 🟢 Muda para Verde se tudo ocorreu bem e encontrou dados
+            // 🟢 Muda para Verde se encontrou dados válidos
             txtStatus.innerText = "Monitorando ativo";
             txtStatus.style.color = "#10b981";
             led.style.backgroundColor = "#10b981";
@@ -205,7 +213,6 @@
         document.getElementById('txt-status').innerText = "Monitorando ativo";
         document.getElementById('txt-status').style.color = "#10b981";
         
-        // 🟢 Mantém o indicador em Verde na tela limpa
         led.style.backgroundColor = "#10b981";
         led.style.boxShadow = "0 0 8px rgba(16, 185, 129, 0.6)";
     }
