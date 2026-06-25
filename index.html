@@ -84,8 +84,8 @@
     // --- CONFIGURAÇÕES ---
     const API_KEY = "AIzaSyCodGa8Wjq-HF_zgYgbOMl3zLTGbk_PpSs";
     
-    // CORREÇÃO: Todos os termos em minúsculo para bater com o .toLowerCase()
-    const TERMOS_PARA_IGNORAR = ["canção nova", "SBT", "aparecida", "redevida", "pai eterno", "santuário de fátima", "jesus é o senhor", "paz perfeita", "oficial"];
+    // Lista corrigida com termos totalmente em minúsculo
+    const TERMOS_PARA_IGNORAR = ["canção nova", "sbt", "aparecida", "redevida", "pai eterno", "santuário de fátima", "jesus é o senhor", "paz perfeita", "oficial"];
     
     const TEMPO_CHECAGEM = 900000; // 15 minutos
     
@@ -141,7 +141,7 @@
 
                 if (!idV || idV === "None") return;
                 
-                // CORREÇÃO: Ignora se o termo proibido estiver no nome do canal OU no título da live
+                // Valida o filtro em minúsculo tanto para o canal quanto para o título da live
                 const deveIgnorar = TERMOS_PARA_IGNORAR.some(termo => 
                     nomeCanal.includes(termo) || tituloLive.includes(termo)
                 );
@@ -179,7 +179,7 @@
                 return;
             }
             
-            // 🟢 Muda para Verde se encontrou dados válidos
+            // 🟢 Muda para Verde se tudo correu bem
             txtStatus.innerText = "Monitorando ativo";
             txtStatus.style.color = "#10b981";
             led.style.backgroundColor = "#10b981";
